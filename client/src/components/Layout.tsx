@@ -24,6 +24,7 @@ export function Layout({ children }: { children: ReactNode }) {
       >
         <nav style={{ display: 'flex', gap: 16 }}>
           <Link to="/customers">Customers</Link>
+          <Link to="/products">Products</Link>
         </nav>
         {user && (
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
