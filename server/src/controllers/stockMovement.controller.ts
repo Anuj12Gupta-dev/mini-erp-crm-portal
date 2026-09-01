@@ -5,11 +5,12 @@ import {
   listStockMovementsQuerySchema,
 } from '../schemas/stockMovement.schema';
 import { NotFoundError, InsufficientStockError, statusForError } from '../lib/errors';
+import { sendValidationError } from '../lib/httpError';
 
 export async function listStockMovements(req: Request, res: Response): Promise<void> {
   const parsed = listStockMovementsQuerySchema.safeParse(req.query);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
+    sendValidationError(res, parsed.error);
     return;
   }
   const { page, pageSize, productId } = parsed.data;
@@ -39,7 +40,7 @@ export async function createStockMovement(
 ): Promise<void> {
   const parsed = createStockMovementSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid stock movement data', details: parsed.error.issues });
+    sendValidationError(res, parsed.error);
     return;
   }
   const { quantity, type, reason } = parsed.data;

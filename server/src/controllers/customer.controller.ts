@@ -6,11 +6,12 @@ import {
   updateCustomerSchema,
   listCustomersQuerySchema,
 } from '../schemas/customer.schema';
+import { sendValidationError } from '../lib/httpError';
 
 export async function listCustomers(req: Request, res: Response): Promise<void> {
   const parsed = listCustomersQuerySchema.safeParse(req.query);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
+    sendValidationError(res, parsed.error);
     return;
   }
   const { page, pageSize, search, status, type } = parsed.data;
@@ -58,7 +59,7 @@ export async function getCustomer(
 export async function createCustomer(req: Request, res: Response): Promise<void> {
   const parsed = createCustomerSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid customer data', details: parsed.error.issues });
+    sendValidationError(res, parsed.error);
     return;
   }
   const customer = await prisma.customer.create({ data: parsed.data });
@@ -71,7 +72,7 @@ export async function updateCustomer(
 ): Promise<void> {
   const parsed = updateCustomerSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid customer data', details: parsed.error.issues });
+    sendValidationError(res, parsed.error);
     return;
   }
 

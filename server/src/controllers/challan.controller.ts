@@ -7,6 +7,7 @@ import {
   listChallansQuerySchema,
 } from '../schemas/challan.schema';
 import { NotFoundError, ConflictError, InsufficientStockError, statusForError } from '../lib/errors';
+import { sendValidationError } from '../lib/httpError';
 
 type Tx = Prisma.TransactionClient;
 
@@ -61,7 +62,7 @@ async function buildItemsAndTotal(
 export async function listChallans(req: Request, res: Response): Promise<void> {
   const parsed = listChallansQuerySchema.safeParse(req.query);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
+    sendValidationError(res, parsed.error);
     return;
   }
   const { page, pageSize, search, status, customerId } = parsed.data;
@@ -108,7 +109,7 @@ export async function getChallan(req: Request<{ id: string }>, res: Response): P
 export async function createChallan(req: Request, res: Response): Promise<void> {
   const parsed = createChallanSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid challan data', details: parsed.error.issues });
+    sendValidationError(res, parsed.error);
     return;
   }
   const { customerId, items } = parsed.data;
@@ -149,7 +150,7 @@ export async function createChallan(req: Request, res: Response): Promise<void> 
 export async function updateChallan(req: Request<{ id: string }>, res: Response): Promise<void> {
   const parsed = updateChallanSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid challan data', details: parsed.error.issues });
+    sendValidationError(res, parsed.error);
     return;
   }
 

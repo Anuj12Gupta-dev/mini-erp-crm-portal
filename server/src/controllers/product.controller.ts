@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
 import { createProductSchema, updateProductSchema, listProductsQuerySchema } from '../schemas/product.schema';
+import { sendValidationError } from '../lib/httpError';
 
 function withLowStockFlag<T extends { currentStock: number; minStockQty: number }>(product: T) {
   return { ...product, isLowStock: product.currentStock <= product.minStockQty };
@@ -10,7 +11,7 @@ function withLowStockFlag<T extends { currentStock: number; minStockQty: number 
 export async function listProducts(req: Request, res: Response): Promise<void> {
   const parsed = listProductsQuerySchema.safeParse(req.query);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid query parameters', details: parsed.error.issues });
+    sendValidationError(res, parsed.error);
     return;
   }
   const { page, pageSize, search, category, lowStock } = parsed.data;
@@ -74,7 +75,7 @@ export async function getProduct(req: Request<{ id: string }>, res: Response): P
 export async function createProduct(req: Request, res: Response): Promise<void> {
   const parsed = createProductSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid product data', details: parsed.error.issues });
+    sendValidationError(res, parsed.error);
     return;
   }
   const { openingStock, ...data } = parsed.data;
@@ -107,7 +108,7 @@ export async function createProduct(req: Request, res: Response): Promise<void> 
 export async function updateProduct(req: Request<{ id: string }>, res: Response): Promise<void> {
   const parsed = updateProductSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid product data', details: parsed.error.issues });
+    sendValidationError(res, parsed.error);
     return;
   }
 

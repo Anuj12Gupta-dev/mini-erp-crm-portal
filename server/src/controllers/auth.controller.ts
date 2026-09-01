@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../prisma';
 import { comparePassword } from '../lib/password';
 import { signAuthToken } from '../lib/jwt';
+import { sendValidationError } from '../lib/httpError';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -12,7 +13,7 @@ const loginSchema = z.object({
 export async function login(req: Request, res: Response): Promise<void> {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid email or password format' });
+    sendValidationError(res, parsed.error, 'Invalid email or password format');
     return;
   }
 

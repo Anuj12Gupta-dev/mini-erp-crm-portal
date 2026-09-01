@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../prisma';
 import { createFollowUpSchema } from '../schemas/followup.schema';
+import { sendValidationError } from '../lib/httpError';
 
 export async function listFollowUps(
   req: Request<{ customerId: string }>,
@@ -26,7 +27,7 @@ export async function createFollowUp(
 ): Promise<void> {
   const parsed = createFollowUpSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Invalid follow-up data', details: parsed.error.issues });
+    sendValidationError(res, parsed.error);
     return;
   }
 
