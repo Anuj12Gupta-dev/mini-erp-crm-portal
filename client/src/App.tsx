@@ -11,6 +11,9 @@ import { ProductListPage } from './pages/ProductListPage';
 import { ProductFormPage } from './pages/ProductFormPage';
 import { ProductDetailPage } from './pages/ProductDetailPage';
 import { StockMovementLogPage } from './pages/StockMovementLogPage';
+import { ChallanListPage } from './pages/ChallanListPage';
+import { ChallanFormPage } from './pages/ChallanFormPage';
+import { ChallanDetailPage } from './pages/ChallanDetailPage';
 
 function Protected({ children }: { children: ReactNode }) {
   return (
@@ -95,6 +98,30 @@ function App() {
             element={
               <Protected>
                 <StockMovementLogPage />
+              </Protected>
+            }
+          />
+          <Route
+            path="/challans"
+            element={
+              <Protected>
+                <ChallanListPage />
+              </Protected>
+            }
+          />
+          <Route
+            path="/challans/new"
+            element={
+              <Protected>
+                <ChallanFormPage />
+              </Protected>
+            }
+          />
+          <Route
+            path="/challans/:id"
+            element={
+              <Protected>
+                <ChallanDetailPage />
               </Protected>
             }
           />

@@ -4,6 +4,7 @@ import {
   createStockMovementSchema,
   listStockMovementsQuerySchema,
 } from '../schemas/stockMovement.schema';
+import { NotFoundError, InsufficientStockError, statusForError } from '../lib/errors';
 
 export async function listStockMovements(req: Request, res: Response): Promise<void> {
   const parsed = listStockMovementsQuerySchema.safeParse(req.query);
@@ -50,43 +51,46 @@ export async function createStockMovement(
         throw new NotFoundError('Product not found');
       }
 
-      if (type === 'OUT' && product.currentStock < quantity) {
-        throw new InsufficientStockError(
-          `Insufficient stock: only ${product.currentStock} unit(s) of "${product.name}" available`,
-        );
+      // Decrement is a single conditional UPDATE (not a read-then-write) so two concurrent
+      // OUT movements on the same product can't both pass a stale stock check.
+      if (type === 'OUT') {
+        const updated = await tx.product.updateMany({
+          where: { id: product.id, currentStock: { gte: quantity } },
+          data: { currentStock: { decrement: quantity } },
+        });
+        if (updated.count === 0) {
+          const fresh = await tx.product.findUnique({ where: { id: product.id } });
+          throw new InsufficientStockError(
+            `Insufficient stock: only ${fresh?.currentStock ?? 0} unit(s) of "${product.name}" available`,
+          );
+        }
+      } else {
+        await tx.product.update({
+          where: { id: product.id },
+          data: { currentStock: { increment: quantity } },
+        });
       }
 
-      const newStock = type === 'IN' ? product.currentStock + quantity : product.currentStock - quantity;
-
-      const [movement] = await Promise.all([
-        tx.stockMovement.create({
-          data: {
-            productId: product.id,
-            quantity,
-            type,
-            reason,
-            createdById: req.user!.userId,
-          },
-        }),
-        tx.product.update({ where: { id: product.id }, data: { currentStock: newStock } }),
-      ]);
+      const movement = await tx.stockMovement.create({
+        data: {
+          productId: product.id,
+          quantity,
+          type,
+          reason,
+          createdById: req.user!.userId,
+        },
+      });
 
       return movement;
     });
 
     res.status(201).json(result);
   } catch (err) {
-    if (err instanceof NotFoundError) {
-      res.status(404).json({ error: err.message });
-      return;
-    }
-    if (err instanceof InsufficientStockError) {
-      res.status(400).json({ error: err.message });
+    const status = statusForError(err);
+    if (status) {
+      res.status(status).json({ error: (err as Error).message });
       return;
     }
     throw err;
   }
 }
-
-class NotFoundError extends Error {}
-class InsufficientStockError extends Error {}

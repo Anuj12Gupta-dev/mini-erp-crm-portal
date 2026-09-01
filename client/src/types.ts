@@ -64,6 +64,35 @@ export interface StockMovement {
   createdBy?: { id: string; name: string };
 }
 
+export type ChallanStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED';
+
+export interface ChallanItem {
+  id: string;
+  challanId: string;
+  productId: string;
+  productName: string;
+  productSku: string;
+  unitPrice: string;
+  quantity: number;
+  lineTotal: string;
+}
+
+export interface Challan {
+  id: string;
+  challanNumber: string;
+  customerId: string;
+  status: ChallanStatus;
+  totalAmount: string;
+  createdById: string;
+  confirmedAt: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  customer?: { id: string; name: string; mobile: string; businessName: string | null };
+  createdBy?: { id: string; name: string };
+  items: ChallanItem[];
+}
+
 export interface Paginated<T> {
   data: T[];
   page: number;
