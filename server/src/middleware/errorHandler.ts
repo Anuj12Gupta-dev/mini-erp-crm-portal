@@ -26,6 +26,16 @@ export function errorHandler(err: unknown, _req: Request, res: Response, _next: 
     }
   }
 
+  // A RESTRICT violation raised directly by Postgres (rather than one Prisma recognizes and
+  // codes as P2003) surfaces as PrismaClientUnknownRequestError with the raw DB message.
+  if (
+    err instanceof Prisma.PrismaClientUnknownRequestError &&
+    /foreign key constraint/i.test(err.message)
+  ) {
+    res.status(409).json({ error: 'This record is referenced by other records and cannot be modified' });
+    return;
+  }
+
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
 }
