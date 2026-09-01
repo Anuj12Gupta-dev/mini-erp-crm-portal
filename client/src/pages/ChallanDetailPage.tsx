@@ -2,11 +2,20 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
-import type { Challan } from '../types';
+import { hasRole } from '../auth/roles';
+import { Badge } from '../components/Badge';
+import type { Challan, ChallanStatus } from '../types';
+
+const STATUS_TONE: Record<ChallanStatus, 'info' | 'success' | 'neutral'> = {
+  DRAFT: 'info',
+  CONFIRMED: 'success',
+  CANCELLED: 'neutral',
+};
 
 export function ChallanDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const canConfirmOrCancel = hasRole(user?.role, 'ADMIN', 'WAREHOUSE');
   const [challan, setChallan] = useState<Challan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -17,8 +26,6 @@ export function ChallanDetailPage() {
   }
 
   useEffect(reload, [id]);
-
-  const canConfirmOrCancel = user?.role === 'ADMIN' || user?.role === 'WAREHOUSE';
 
   async function handleConfirm() {
     setError(null);
@@ -56,60 +63,68 @@ export function ChallanDetailPage() {
 
   return (
     <div style={{ maxWidth: 640 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <div className="page-header">
         <h1>{challan.challanNumber}</h1>
-        <Link to="/challans">Back to challans</Link>
+        <div className="actions">
+          <Link to="/challans">Back to challans</Link>
+        </div>
       </div>
 
-      <dl>
-        <dt>Status</dt>
-        <dd>{challan.status}</dd>
-        <dt>Customer</dt>
-        <dd>{challan.customer?.name}</dd>
-        <dt>Created by</dt>
-        <dd>{challan.createdBy?.name}</dd>
-        <dt>Total</dt>
-        <dd>{challan.totalAmount}</dd>
-      </dl>
+      <div className="card">
+        <dl className="detail-grid">
+          <dt>Status</dt>
+          <dd>
+            <Badge tone={STATUS_TONE[challan.status]}>{challan.status}</Badge>
+          </dd>
+          <dt>Customer</dt>
+          <dd>{challan.customer?.name}</dd>
+          <dt>Created by</dt>
+          <dd>{challan.createdBy?.name}</dd>
+          <dt>Total</dt>
+          <dd>{challan.totalAmount}</dd>
+        </dl>
+      </div>
 
       <h2>Items</h2>
-      <table width="100%" cellPadding={6} style={{ borderCollapse: 'collapse' }}>
-        <thead>
-          <tr style={{ textAlign: 'left', borderBottom: '1px solid #ddd' }}>
-            <th>Product</th>
-            <th>SKU</th>
-            <th>Unit price</th>
-            <th>Qty</th>
-            <th>Line total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {challan.items.map((item) => (
-            <tr key={item.id} style={{ borderBottom: '1px solid #eee' }}>
-              <td>{item.productName}</td>
-              <td>{item.productSku}</td>
-              <td>{item.unitPrice}</td>
-              <td>{item.quantity}</td>
-              <td>{item.lineTotal}</td>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>SKU</th>
+              <th>Unit price</th>
+              <th>Qty</th>
+              <th>Line total</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {challan.items.map((item) => (
+              <tr key={item.id}>
+                <td>{item.productName}</td>
+                <td>{item.productSku}</td>
+                <td>{item.unitPrice}</td>
+                <td>{item.quantity}</td>
+                <td>{item.lineTotal}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-      {error && <p style={{ color: 'crimson' }}>{error}</p>}
+      {error && <p className="error-text">{error}</p>}
 
-      <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
-        {challan.status === 'DRAFT' && canConfirmOrCancel && (
-          <button type="button" onClick={handleConfirm} disabled={busy}>
-            Confirm
-          </button>
-        )}
-        {challan.status !== 'CANCELLED' && canConfirmOrCancel && (
-          <button type="button" onClick={handleCancel} disabled={busy}>
+      {canConfirmOrCancel && (challan.status === 'DRAFT' || challan.status === 'CONFIRMED') && (
+        <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+          {challan.status === 'DRAFT' && (
+            <button type="button" className="btn btn-primary" onClick={handleConfirm} disabled={busy}>
+              Confirm
+            </button>
+          )}
+          <button type="button" className="btn btn-danger" onClick={handleCancel} disabled={busy}>
             Cancel
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

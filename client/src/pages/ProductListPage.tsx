@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
+import { hasRole } from '../auth/roles';
+import { Badge } from '../components/Badge';
+import { Pagination } from '../components/Pagination';
 import type { Paginated, Product } from '../types';
 
 export function ProductListPage() {
+  const { user } = useAuth();
+  const canManage = hasRole(user?.role, 'ADMIN', 'WAREHOUSE');
   const [result, setResult] = useState<Paginated<Product> | null>(null);
   const [search, setSearch] = useState('');
   const [lowStockOnly, setLowStockOnly] = useState(false);
@@ -30,15 +36,15 @@ export function ProductListPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div className="page-header">
         <h1>Products</h1>
-        <div style={{ display: 'flex', gap: 16 }}>
+        <div className="actions">
           <Link to="/stock-movements">Stock movement log</Link>
-          <Link to="/products/new">+ Add product</Link>
+          {canManage && <Link to="/products/new">+ Add product</Link>}
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
+      <div className="toolbar">
         <input
           placeholder="Search by name or SKU..."
           value={search}
@@ -46,17 +52,18 @@ export function ProductListPage() {
             setPage(1);
             setSearch(e.target.value);
           }}
-          style={{ width: '100%', maxWidth: 400 }}
+          style={{ maxWidth: 400 }}
         />
-        <label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <input
             type="checkbox"
+            style={{ width: 'auto' }}
             checked={lowStockOnly}
             onChange={(e) => {
               setPage(1);
               setLowStockOnly(e.target.checked);
             }}
-          />{' '}
+          />
           Low stock only
         </label>
       </div>
@@ -65,56 +72,54 @@ export function ProductListPage() {
 
       {result && (
         <>
-          <table width="100%" cellPadding={8} style={{ borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid #ddd' }}>
-                <th>Name</th>
-                <th>SKU</th>
-                <th>Category</th>
-                <th>Unit price</th>
-                <th>Stock</th>
-                <th>Location</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.data.map((p) => (
-                <tr key={p.id} style={{ borderBottom: '1px solid #eee' }}>
-                  <td>
-                    <Link to={`/products/${p.id}`}>{p.name}</Link>
-                  </td>
-                  <td>{p.sku}</td>
-                  <td>{p.category ?? '-'}</td>
-                  <td>{p.unitPrice}</td>
-                  <td style={{ color: p.isLowStock ? 'crimson' : undefined }}>
-                    {p.currentStock}
-                    {p.isLowStock ? ' (low)' : ''}
-                  </td>
-                  <td>{p.location ?? '-'}</td>
-                </tr>
-              ))}
-              {result.data.length === 0 && (
+          <div className="table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan={6}>No products found.</td>
+                  <th>Name</th>
+                  <th>SKU</th>
+                  <th>Category</th>
+                  <th>Unit price</th>
+                  <th>Stock</th>
+                  <th>Location</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-
-          <div style={{ marginTop: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button type="button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              Previous
-            </button>
-            <span>
-              Page {result.page} of {result.totalPages || 1} ({result.total} total)
-            </span>
-            <button
-              type="button"
-              disabled={page >= result.totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </button>
+              </thead>
+              <tbody>
+                {result.data.map((p) => (
+                  <tr key={p.id}>
+                    <td>
+                      <Link to={`/products/${p.id}`}>{p.name}</Link>
+                    </td>
+                    <td>{p.sku}</td>
+                    <td>{p.category ?? '-'}</td>
+                    <td>{p.unitPrice}</td>
+                    <td>
+                      {p.currentStock}
+                      {p.isLowStock && (
+                        <>
+                          {' '}
+                          <Badge tone="danger">low</Badge>
+                        </>
+                      )}
+                    </td>
+                    <td>{p.location ?? '-'}</td>
+                  </tr>
+                ))}
+                {result.data.length === 0 && (
+                  <tr>
+                    <td colSpan={6}>No products found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
+
+          <Pagination
+            page={result.page}
+            totalPages={result.totalPages}
+            total={result.total}
+            onChange={setPage}
+          />
         </>
       )}
     </div>

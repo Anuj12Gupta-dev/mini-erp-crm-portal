@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
+import { Field } from '../components/Field';
 import type { Challan, Customer, Paginated, Product } from '../types';
 
 interface LineItem {
@@ -77,12 +78,10 @@ export function ChallanFormPage() {
   }
 
   return (
-    <div style={{ maxWidth: 640 }}>
+    <div className="card" style={{ maxWidth: 640 }}>
       <h1>New challan</h1>
       <form onSubmit={handleSubmit}>
-        <div style={{ marginTop: 12 }}>
-          <label>Customer</label>
-          <br />
+        <Field label="Customer">
           <select value={customerId} onChange={(e) => setCustomerId(e.target.value)} required>
             <option value="">Select a customer...</option>
             {customers.map((c) => (
@@ -91,9 +90,9 @@ export function ChallanFormPage() {
               </option>
             ))}
           </select>
-        </div>
+        </Field>
 
-        <h2 style={{ marginTop: 24 }}>Line items</h2>
+        <h2>Line items</h2>
         {lines.map((line, index) => {
           const product = productById(line.productId);
           return (
@@ -119,14 +118,23 @@ export function ChallanFormPage() {
                 style={{ width: 80 }}
                 required
               />
-              {product && <span>= {(Number(product.unitPrice) * (Number(line.quantity) || 0)).toFixed(2)}</span>}
-              <button type="button" onClick={() => removeLine(index)} disabled={lines.length === 1}>
+              {product && (
+                <span style={{ whiteSpace: 'nowrap' }}>
+                  = {(Number(product.unitPrice) * (Number(line.quantity) || 0)).toFixed(2)}
+                </span>
+              )}
+              <button
+                type="button"
+                className="btn"
+                onClick={() => removeLine(index)}
+                disabled={lines.length === 1}
+              >
                 Remove
               </button>
             </div>
           );
         })}
-        <button type="button" onClick={addLine} style={{ marginTop: 8 }}>
+        <button type="button" className="btn" onClick={addLine} style={{ marginTop: 8 }}>
           + Add line
         </button>
 
@@ -134,8 +142,8 @@ export function ChallanFormPage() {
           <strong>Estimated total: {estimatedTotal.toFixed(2)}</strong>
         </p>
 
-        {error && <p style={{ color: 'crimson' }}>{error}</p>}
-        <button type="submit" disabled={submitting} style={{ marginTop: 16 }}>
+        {error && <p className="error-text">{error}</p>}
+        <button type="submit" className="btn btn-primary" disabled={submitting} style={{ marginTop: 16 }}>
           {submitting ? 'Creating...' : 'Create draft challan'}
         </button>
       </form>

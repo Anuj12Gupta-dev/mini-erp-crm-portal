@@ -2,10 +2,15 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
+import { hasRole } from '../auth/roles';
+import { Badge } from '../components/Badge';
 import type { Paginated, Product, StockMovement, StockMovementType } from '../types';
 
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const canManage = hasRole(user?.role, 'ADMIN', 'WAREHOUSE');
   const [product, setProduct] = useState<Product | null>(null);
   const [movements, setMovements] = useState<StockMovement[]>([]);
   const [quantity, setQuantity] = useState('');
@@ -47,55 +52,71 @@ export function ProductDetailPage() {
 
   return (
     <div style={{ maxWidth: 640 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <div className="page-header">
         <h1>{product.name}</h1>
-        <Link to={`/products/${product.id}/edit`}>Edit</Link>
+        {canManage && (
+          <div className="actions">
+            <Link to={`/products/${product.id}/edit`}>Edit</Link>
+          </div>
+        )}
       </div>
 
-      <dl>
-        <dt>SKU</dt>
-        <dd>{product.sku}</dd>
-        <dt>Category</dt>
-        <dd>{product.category ?? '-'}</dd>
-        <dt>Unit price</dt>
-        <dd>{product.unitPrice}</dd>
-        <dt>Current stock</dt>
-        <dd style={{ color: product.isLowStock ? 'crimson' : undefined }}>
-          {product.currentStock}
-          {product.isLowStock ? ' (low stock)' : ''}
-        </dd>
-        <dt>Min stock alert qty</dt>
-        <dd>{product.minStockQty}</dd>
-        <dt>Location</dt>
-        <dd>{product.location ?? '-'}</dd>
-      </dl>
+      <div className="card">
+        <dl className="detail-grid">
+          <dt>SKU</dt>
+          <dd>{product.sku}</dd>
+          <dt>Category</dt>
+          <dd>{product.category ?? '-'}</dd>
+          <dt>Unit price</dt>
+          <dd>{product.unitPrice}</dd>
+          <dt>Current stock</dt>
+          <dd>
+            {product.currentStock}
+            {product.isLowStock && (
+              <>
+                {' '}
+                <Badge tone="danger">low stock</Badge>
+              </>
+            )}
+          </dd>
+          <dt>Min stock alert qty</dt>
+          <dd>{product.minStockQty}</dd>
+          <dt>Location</dt>
+          <dd>{product.location ?? '-'}</dd>
+        </dl>
+      </div>
 
-      <h2>Record stock movement</h2>
-      <form onSubmit={handleAddMovement} style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        <select value={type} onChange={(e) => setType(e.target.value as StockMovementType)}>
-          <option value="IN">IN</option>
-          <option value="OUT">OUT</option>
-        </select>
-        <input
-          type="number"
-          min="1"
-          placeholder="Qty"
-          value={quantity}
-          onChange={(e) => setQuantity(e.target.value)}
-          style={{ width: 80 }}
-          required
-        />
-        <input
-          placeholder="Reason"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          required
-        />
-        <button type="submit" disabled={submitting}>
-          Record
-        </button>
-      </form>
-      {error && <p style={{ color: 'crimson' }}>{error}</p>}
+      {canManage && (
+        <>
+          <h2>Record stock movement</h2>
+          <form onSubmit={handleAddMovement} className="toolbar">
+            <select value={type} onChange={(e) => setType(e.target.value as StockMovementType)} style={{ width: 90 }}>
+              <option value="IN">IN</option>
+              <option value="OUT">OUT</option>
+            </select>
+            <input
+              type="number"
+              min="1"
+              placeholder="Qty"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              style={{ width: 90 }}
+              required
+            />
+            <input
+              placeholder="Reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              style={{ maxWidth: 240 }}
+              required
+            />
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              Record
+            </button>
+          </form>
+          {error && <p className="error-text">{error}</p>}
+        </>
+      )}
 
       <h2>Movement history</h2>
       <ul>

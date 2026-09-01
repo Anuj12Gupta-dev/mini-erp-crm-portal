@@ -1,9 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client';
+import { useAuth } from '../auth/AuthContext';
+import { hasRole } from '../auth/roles';
+import { Badge } from '../components/Badge';
+import { Pagination } from '../components/Pagination';
 import type { Challan, ChallanStatus, Paginated } from '../types';
 
+const STATUS_TONE: Record<ChallanStatus, 'info' | 'success' | 'neutral'> = {
+  DRAFT: 'info',
+  CONFIRMED: 'success',
+  CANCELLED: 'neutral',
+};
+
 export function ChallanListPage() {
+  const { user } = useAuth();
+  const canCreate = hasRole(user?.role, 'ADMIN', 'SALES');
   const [result, setResult] = useState<Paginated<Challan> | null>(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<ChallanStatus | ''>('');
@@ -25,12 +37,16 @@ export function ChallanListPage() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div className="page-header">
         <h1>Challans</h1>
-        <Link to="/challans/new">+ New challan</Link>
+        {canCreate && (
+          <div className="actions">
+            <Link to="/challans/new">+ New challan</Link>
+          </div>
+        )}
       </div>
 
-      <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+      <div className="toolbar">
         <input
           placeholder="Search by challan # or customer..."
           value={search}
@@ -38,7 +54,7 @@ export function ChallanListPage() {
             setPage(1);
             setSearch(e.target.value);
           }}
-          style={{ width: '100%', maxWidth: 400 }}
+          style={{ maxWidth: 400 }}
         />
         <select
           value={status}
@@ -46,6 +62,7 @@ export function ChallanListPage() {
             setPage(1);
             setStatus(e.target.value as ChallanStatus | '');
           }}
+          style={{ width: 'auto' }}
         >
           <option value="">All statuses</option>
           <option value="DRAFT">Draft</option>
@@ -56,51 +73,46 @@ export function ChallanListPage() {
 
       {result && (
         <>
-          <table width="100%" cellPadding={8} style={{ borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '1px solid #ddd' }}>
-                <th>Challan #</th>
-                <th>Customer</th>
-                <th>Status</th>
-                <th>Total</th>
-                <th>Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.data.map((c) => (
-                <tr key={c.id} style={{ borderBottom: '1px solid #eee' }}>
-                  <td>
-                    <Link to={`/challans/${c.id}`}>{c.challanNumber}</Link>
-                  </td>
-                  <td>{c.customer?.name ?? '-'}</td>
-                  <td>{c.status}</td>
-                  <td>{c.totalAmount}</td>
-                  <td>{new Date(c.createdAt).toLocaleDateString()}</td>
-                </tr>
-              ))}
-              {result.data.length === 0 && (
+          <div className="table-wrap">
+            <table>
+              <thead>
                 <tr>
-                  <td colSpan={5}>No challans found.</td>
+                  <th>Challan #</th>
+                  <th>Customer</th>
+                  <th>Status</th>
+                  <th>Total</th>
+                  <th>Created</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-
-          <div style={{ marginTop: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button type="button" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-              Previous
-            </button>
-            <span>
-              Page {result.page} of {result.totalPages || 1} ({result.total} total)
-            </span>
-            <button
-              type="button"
-              disabled={page >= result.totalPages}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </button>
+              </thead>
+              <tbody>
+                {result.data.map((c) => (
+                  <tr key={c.id}>
+                    <td>
+                      <Link to={`/challans/${c.id}`}>{c.challanNumber}</Link>
+                    </td>
+                    <td>{c.customer?.name ?? '-'}</td>
+                    <td>
+                      <Badge tone={STATUS_TONE[c.status]}>{c.status}</Badge>
+                    </td>
+                    <td>{c.totalAmount}</td>
+                    <td>{new Date(c.createdAt).toLocaleDateString()}</td>
+                  </tr>
+                ))}
+                {result.data.length === 0 && (
+                  <tr>
+                    <td colSpan={5}>No challans found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
+
+          <Pagination
+            page={result.page}
+            totalPages={result.totalPages}
+            total={result.total}
+            onChange={setPage}
+          />
         </>
       )}
     </div>

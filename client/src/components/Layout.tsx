@@ -1,6 +1,14 @@
 import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import type { Role } from '../types';
+
+const NAV_ITEMS: { to: string; label: string; roles: Role[] }[] = [
+  { to: '/customers', label: 'Customers', roles: ['ADMIN', 'SALES', 'ACCOUNTS'] },
+  { to: '/products', label: 'Products', roles: ['ADMIN', 'SALES', 'WAREHOUSE', 'ACCOUNTS'] },
+  { to: '/challans', label: 'Challans', roles: ['ADMIN', 'SALES', 'WAREHOUSE', 'ACCOUNTS'] },
+  { to: '/stock-movements', label: 'Stock Log', roles: ['ADMIN', 'WAREHOUSE', 'ACCOUNTS'] },
+];
 
 export function Layout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
@@ -11,34 +19,31 @@ export function Layout({ children }: { children: ReactNode }) {
     navigate('/login');
   }
 
+  const visibleNavItems = NAV_ITEMS.filter((item) => user && item.roles.includes(user.role));
+
   return (
     <div>
-      <header
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '12px 24px',
-          borderBottom: '1px solid #ddd',
-        }}
-      >
-        <nav style={{ display: 'flex', gap: 16 }}>
-          <Link to="/customers">Customers</Link>
-          <Link to="/products">Products</Link>
-          <Link to="/challans">Challans</Link>
+      <header className="app-header">
+        <span className="app-brand">Mini ERP + CRM</span>
+        <nav className="app-nav">
+          {visibleNavItems.map((item) => (
+            <Link key={item.to} to={item.to}>
+              {item.label}
+            </Link>
+          ))}
         </nav>
         {user && (
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div className="app-user">
             <span>
-              {user.name} ({user.role})
+              {user.name} · {user.role}
             </span>
-            <button type="button" onClick={handleLogout}>
+            <button type="button" className="btn" onClick={handleLogout}>
               Logout
             </button>
           </div>
         )}
       </header>
-      <main style={{ padding: 24 }}>{children}</main>
+      <main className="app-content">{children}</main>
     </div>
   );
 }

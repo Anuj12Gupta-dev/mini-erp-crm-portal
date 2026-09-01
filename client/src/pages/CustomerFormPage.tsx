@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import type { FormEvent, ReactNode } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/client';
+import { Field } from '../components/Field';
 import type { Customer, CustomerType, CustomerStatus } from '../types';
 
 interface FormState {
@@ -90,7 +91,7 @@ export function CustomerFormPage() {
   }
 
   return (
-    <div style={{ maxWidth: 480 }}>
+    <div className="card" style={{ maxWidth: 480 }}>
       <h1>{isEdit ? 'Edit customer' : 'Add customer'}</h1>
       <form onSubmit={handleSubmit}>
         <Field label="Name">
@@ -150,21 +151,11 @@ export function CustomerFormPage() {
           <textarea value={form.notes} onChange={(e) => update('notes', e.target.value)} />
         </Field>
 
-        {error && <p style={{ color: 'crimson' }}>{error}</p>}
-        <button type="submit" disabled={submitting} style={{ marginTop: 16 }}>
+        {error && <p className="error-text">{error}</p>}
+        <button type="submit" className="btn btn-primary" disabled={submitting} style={{ marginTop: 16 }}>
           {submitting ? 'Saving...' : 'Save'}
         </button>
       </form>
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div style={{ marginTop: 12 }}>
-      <label>{label}</label>
-      <br />
-      {children}
     </div>
   );
 }
