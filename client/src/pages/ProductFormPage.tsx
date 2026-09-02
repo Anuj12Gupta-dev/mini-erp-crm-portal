@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { FormEvent } from 'react';
+import type { ChangeEvent, FormEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api/client';
 import { Field } from '../components/Field';
@@ -13,6 +13,7 @@ interface FormState {
   minStockQty: string;
   location: string;
   openingStock: string;
+  imageUrl: string;
 }
 
 const EMPTY_FORM: FormState = {
@@ -23,6 +24,7 @@ const EMPTY_FORM: FormState = {
   minStockQty: '0',
   location: '',
   openingStock: '0',
+  imageUrl: '',
 };
 
 export function ProductFormPage() {
@@ -32,6 +34,8 @@ export function ProductFormPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -45,12 +49,39 @@ export function ProductFormPage() {
         minStockQty: String(p.minStockQty),
         location: p.location ?? '',
         openingStock: String(p.currentStock),
+        imageUrl: p.imageUrl ?? '',
       });
     });
   }, [id]);
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
+  }
+
+  async function handleImageSelected(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const presign = await api.post<{ uploadUrl: string; publicUrl: string }>('/uploads/presign', {
+        filename: file.name,
+        contentType: file.type,
+      });
+      await fetch(presign.data.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': file.type },
+        body: file,
+      });
+      update('imageUrl', presign.data.publicUrl);
+    } catch (err) {
+      const message =
+        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
+        'Could not upload image';
+      setUploadError(message);
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -66,6 +97,7 @@ export function ProductFormPage() {
           unitPrice: form.unitPrice,
           minStockQty: form.minStockQty,
           location: form.location || undefined,
+          imageUrl: form.imageUrl || undefined,
         });
         navigate(`/products/${id}`);
       } else {
@@ -76,6 +108,7 @@ export function ProductFormPage() {
           unitPrice: form.unitPrice,
           minStockQty: form.minStockQty,
           location: form.location || undefined,
+          imageUrl: form.imageUrl || undefined,
           openingStock: form.openingStock,
         });
         navigate(`/products/${res.data.id}`);
@@ -131,6 +164,18 @@ export function ProductFormPage() {
             />
           </Field>
         )}
+        <Field label="Product image">
+          {form.imageUrl && (
+            <img
+              src={form.imageUrl}
+              alt=""
+              style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, marginBottom: 8 }}
+            />
+          )}
+          <input type="file" accept="image/*" onChange={handleImageSelected} disabled={uploading} />
+          {uploading && <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Uploading...</span>}
+          {uploadError && <p className="error-text">{uploadError}</p>}
+        </Field>
 
         {error && <p className="error-text">{error}</p>}
         <button type="submit" className="btn btn-primary" disabled={submitting} style={{ marginTop: 16 }}>

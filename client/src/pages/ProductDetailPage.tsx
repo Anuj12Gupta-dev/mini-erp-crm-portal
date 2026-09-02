@@ -62,6 +62,13 @@ export function ProductDetailPage() {
       </div>
 
       <div className="card">
+        {product.imageUrl && (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 6, marginBottom: 16 }}
+          />
+        )}
         <dl className="detail-grid">
           <dt>SKU</dt>
           <dd>{product.sku}</dd>

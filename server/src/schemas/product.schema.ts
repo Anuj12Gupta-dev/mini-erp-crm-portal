@@ -7,6 +7,7 @@ export const createProductSchema = z.object({
   unitPrice: z.coerce.number().nonnegative(),
   minStockQty: z.coerce.number().int().nonnegative().optional().default(0),
   location: z.string().optional(),
+  imageUrl: z.string().url().optional(),
   openingStock: z.coerce.number().int().nonnegative().optional().default(0),
 });
 

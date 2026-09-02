@@ -5,6 +5,7 @@ import { customerRouter } from './routes/customer.routes';
 import { productRouter } from './routes/product.routes';
 import { stockMovementRouter } from './routes/stockMovement.routes';
 import { challanRouter } from './routes/challan.routes';
+import { uploadRouter } from './routes/upload.routes';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler';
 
 export const app = express();
@@ -21,6 +22,7 @@ app.use('/customers', customerRouter);
 app.use('/products', productRouter);
 app.use('/stock-movements', stockMovementRouter);
 app.use('/challans', challanRouter);
+app.use('/uploads', uploadRouter);
 
 app.use(notFoundHandler);
 app.use(errorHandler);
