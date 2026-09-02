@@ -214,6 +214,19 @@
           }
         },
         {
+          "name": "Get image upload URL (presign)",
+          "description": "Bonus feature. Returns 501 unless the server has AWS_REGION/S3_BUCKET_NAME/AWS credentials configured. On success, PUT the raw file bytes to 'uploadUrl' with a Content-Type header matching what you sent here, then pass 'publicUrl' as the product's imageUrl on create/update.",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filename\": \"widget.png\",\n  \"contentType\": \"image/png\"\n}"
+            },
+            "url": { "raw": "{{baseUrl}}/uploads/presign", "host": ["{{baseUrl}}"], "path": ["uploads", "presign"] }
+          }
+        },
+        {
           "name": "Record stock movement",
           "request": {
             "method": "POST",
@@ -305,6 +318,18 @@
               "raw": "{{baseUrl}}/challans/{{challanId}}",
               "host": ["{{baseUrl}}"],
               "path": ["challans", "{{challanId}}"]
+            }
+          }
+        },
+        {
+          "name": "Download PDF",
+          "description": "Bonus feature. Returns a rendered PDF of the challan (customer, line items, totals). In Postman, click 'Send and Download' to save the file.",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/challans/{{challanId}}/pdf",
+              "host": ["{{baseUrl}}"],
+              "path": ["challans", "{{challanId}}", "pdf"]
             }
           }
         },
