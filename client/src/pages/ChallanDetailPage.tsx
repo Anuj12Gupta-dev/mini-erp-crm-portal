@@ -43,6 +43,16 @@ export function ChallanDetailPage() {
     }
   }
 
+  async function handleDownloadPdf() {
+    const res = await api.get(`/challans/${id}/pdf`, { responseType: 'blob' });
+    const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${challan?.challanNumber ?? 'challan'}.pdf`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   async function handleCancel() {
     setError(null);
     setBusy(true);
@@ -66,6 +76,9 @@ export function ChallanDetailPage() {
       <div className="page-header">
         <h1>{challan.challanNumber}</h1>
         <div className="actions">
+          <button type="button" className="btn" onClick={handleDownloadPdf}>
+            Download PDF
+          </button>
           <Link to="/challans">Back to challans</Link>
         </div>
       </div>
@@ -80,7 +93,9 @@ export function ChallanDetailPage() {
           <dd>{challan.customer?.name}</dd>
           <dt>Created by</dt>
           <dd>{challan.createdBy?.name}</dd>
-          <dt>Total</dt>
+          <dt>Total quantity</dt>
+          <dd>{challan.totalQuantity}</dd>
+          <dt>Total amount</dt>
           <dd>{challan.totalAmount}</dd>
         </dl>
       </div>

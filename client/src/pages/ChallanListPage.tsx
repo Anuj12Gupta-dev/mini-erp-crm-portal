@@ -80,6 +80,7 @@ export function ChallanListPage() {
                   <th>Challan #</th>
                   <th>Customer</th>
                   <th>Status</th>
+                  <th>Qty</th>
                   <th>Total</th>
                   <th>Created</th>
                 </tr>
@@ -94,13 +95,14 @@ export function ChallanListPage() {
                     <td>
                       <Badge tone={STATUS_TONE[c.status]}>{c.status}</Badge>
                     </td>
+                    <td>{c.totalQuantity}</td>
                     <td>{c.totalAmount}</td>
                     <td>{new Date(c.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
                 {result.data.length === 0 && (
                   <tr>
-                    <td colSpan={5}>No challans found.</td>
+                    <td colSpan={6}>No challans found.</td>
                   </tr>
                 )}
               </tbody>

@@ -8,14 +8,19 @@ import {
 } from '../schemas/challan.schema';
 import { NotFoundError, ConflictError, InsufficientStockError, statusForError } from '../lib/errors';
 import { sendValidationError } from '../lib/httpError';
+import { streamChallanPdf } from '../lib/challanPdf';
 
 type Tx = Prisma.TransactionClient;
 
 const challanInclude = {
-  customer: { select: { id: true, name: true, mobile: true, businessName: true } },
+  customer: { select: { id: true, name: true, mobile: true, businessName: true, address: true } },
   createdBy: { select: { id: true, name: true } },
   items: true,
 } satisfies Prisma.ChallanInclude;
+
+function withTotalQuantity<T extends { items: { quantity: number }[] }>(challan: T) {
+  return { ...challan, totalQuantity: challan.items.reduce((sum, item) => sum + item.quantity, 0) };
+}
 
 async function generateChallanNumber(tx: Tx): Promise<string> {
   const count = await tx.challan.count();
@@ -91,7 +96,13 @@ export async function listChallans(req: Request, res: Response): Promise<void> {
     }),
   ]);
 
-  res.json({ data: challans, page, pageSize, total, totalPages: Math.ceil(total / pageSize) });
+  res.json({
+    data: challans.map(withTotalQuantity),
+    page,
+    pageSize,
+    total,
+    totalPages: Math.ceil(total / pageSize),
+  });
 }
 
 export async function getChallan(req: Request<{ id: string }>, res: Response): Promise<void> {
@@ -103,7 +114,19 @@ export async function getChallan(req: Request<{ id: string }>, res: Response): P
     res.status(404).json({ error: 'Challan not found' });
     return;
   }
-  res.json(challan);
+  res.json(withTotalQuantity(challan));
+}
+
+export async function downloadChallanPdf(req: Request<{ id: string }>, res: Response): Promise<void> {
+  const challan = await prisma.challan.findUnique({
+    where: { id: req.params.id },
+    include: challanInclude,
+  });
+  if (!challan) {
+    res.status(404).json({ error: 'Challan not found' });
+    return;
+  }
+  streamChallanPdf(res, challan);
 }
 
 export async function createChallan(req: Request, res: Response): Promise<void> {
@@ -136,7 +159,7 @@ export async function createChallan(req: Request, res: Response): Promise<void> 
       });
     });
 
-    res.status(201).json(challan);
+    res.status(201).json(withTotalQuantity(challan));
   } catch (err) {
     const status = statusForError(err);
     if (status) {
@@ -188,7 +211,7 @@ export async function updateChallan(req: Request<{ id: string }>, res: Response)
       });
     });
 
-    res.json(challan);
+    res.json(withTotalQuantity(challan));
   } catch (err) {
     const status = statusForError(err);
     if (status) {
@@ -264,7 +287,7 @@ export async function confirmChallan(req: Request<{ id: string }>, res: Response
       });
     });
 
-    res.json(challan);
+    res.json(withTotalQuantity(challan));
   } catch (err) {
     const status = statusForError(err);
     if (status) {
@@ -314,7 +337,7 @@ export async function cancelChallan(req: Request<{ id: string }>, res: Response)
       });
     });
 
-    res.json(challan);
+    res.json(withTotalQuantity(challan));
   } catch (err) {
     const status = statusForError(err);
     if (status) {

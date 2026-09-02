@@ -47,6 +47,7 @@ export interface Product {
   currentStock: number;
   minStockQty: number;
   location: string | null;
+  imageUrl: string | null;
   isLowStock: boolean;
   createdAt: string;
   updatedAt: string;
@@ -83,6 +84,7 @@ export interface Challan {
   customerId: string;
   status: ChallanStatus;
   totalAmount: string;
+  totalQuantity: number;
   createdById: string;
   confirmedAt: string | null;
   cancelledAt: string | null;

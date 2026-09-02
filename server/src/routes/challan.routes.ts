@@ -4,6 +4,7 @@ import { authenticate, requireRole } from '../middleware/auth';
 import {
   listChallans,
   getChallan,
+  downloadChallanPdf,
   createChallan,
   updateChallan,
   deleteChallan,
@@ -20,6 +21,7 @@ challanRouter.use(authenticate);
 
 challanRouter.get('/', listChallans);
 challanRouter.get('/:id', getChallan);
+challanRouter.get('/:id/pdf', downloadChallanPdf);
 challanRouter.post('/', canEditDraft, createChallan);
 challanRouter.put('/:id', canEditDraft, updateChallan);
 challanRouter.delete('/:id', canEditDraft, deleteChallan);
