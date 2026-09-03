@@ -188,6 +188,7 @@ textarea {
 }
 
 .btn-primary:hover:not(:disabled) {
+  background: var(--primary);
   filter: brightness(1.08);
 }
 
@@ -195,6 +196,11 @@ textarea {
   background: var(--danger);
   border-color: var(--danger);
   color: #fff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger);
+  filter: brightness(1.08);
 }
 
 .error-text {
