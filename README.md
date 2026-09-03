@@ -107,7 +107,8 @@ docker compose up --build
 | `JWT_SECRET` | Secret used to sign auth tokens |
 | `JWT_EXPIRES_IN` | Token lifetime (e.g. `8h`) |
 | `PORT` | Port the API listens on (default `4000`) |
-| `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `S3_BUCKET_NAME` | Optional — only needed for the product-image-upload bonus feature. `POST /uploads/presign` returns `501` until these are set; everything else works fine without them. |
+| `AWS_REGION`, `S3_BUCKET_NAME` | Needed for the product-image-upload bonus feature. `POST /uploads/presign` returns `501` until both are set; everything else works fine without them. |
+| `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Only for local development. In production these are omitted — the EC2 instance carries an IAM role and the AWS SDK's default credential chain picks it up, so no long-lived keys sit on the server. |
 | `S3_PUBLIC_BASE_URL` | Optional override for the public URL prefix of uploaded images (e.g. a CloudFront domain in front of the bucket). Defaults to the bucket's own S3 URL. |
 
 ### `client/.env`
@@ -155,7 +156,9 @@ The spec didn't prescribe exact permission boundaries per role, so the following
 - **Docker** — `server/Dockerfile` (multi-stage: install → `prisma generate` → `tsc` build → run) and `client/Dockerfile` (multi-stage: Vite build → served by nginx with an SPA fallback). `docker-compose.yml` at the repo root runs both together for local/demo use.
 - **GitHub Actions** — `.github/workflows/ci.yml` lints, type-checks, and builds both apps on every push/PR. `.github/workflows/deploy.yml` redeploys the backend to EC2 over SSH and syncs the frontend build to S3 + invalidates CloudFront (manual trigger by default — see [Continuous deployment](#6--continuous-deployment-optional) for the secrets it needs to run automatically).
 - **Challan PDF export** — `GET /challans/:id/pdf` streams a PDF (via `pdfkit`, no headless browser needed) with the customer, line items, and totals. There's no separate "Invoice" entity in the required data model, so this generates a PDF of the Challan — the closest existing document. A "Download PDF" button is on the challan detail page.
-- **Product image upload to S3** — `POST /uploads/presign` returns a short-lived presigned S3 PUT URL; the browser uploads the file directly to S3 (never through the Node server), then the returned public URL is saved as the product's `imageUrl`. Requires the `AWS_*`/`S3_BUCKET_NAME` env vars above; without them the endpoint responds `501` and the rest of the app is unaffected.
+- **Product image upload to S3** — `POST /uploads/presign` returns a short-lived presigned S3 PUT URL; the browser uploads the file directly to S3 (never through the Node server), then the returned public URL is saved as the product's `imageUrl`. Requires `AWS_REGION` and `S3_BUCKET_NAME`; without them the endpoint responds `501` and the rest of the app is unaffected.
+
+  Live setup: uploads go to a dedicated bucket (`mini-erp-crm-uploads-881424867129`) — deliberately separate from the frontend bucket, because the frontend deploy runs `aws s3 sync --delete` and would otherwise wipe uploaded images. The `products/` prefix is public-read so `<img src>` works; write access is granted only to the EC2 instance role (`s3:PutObject` on that prefix, nothing else), and the bucket has a CORS rule permitting `PUT` from the frontend origin so the browser can upload directly.
 
 ## Deploying to AWS
 
