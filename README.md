@@ -255,6 +255,22 @@ aws s3 cp dist/index.html s3://mini-erp-crm-frontend-881424867129/index.html --c
 aws cloudfront create-invalidation --distribution-id E3K3MIGG90S5MZ --paths "/*"
 ```
 
+### Turning the deployment off and on
+
+Only the EC2 instance is worth switching off — CloudFront has no idle charge (you pay per request), S3 holds ~320 KB, and the Elastic IP is billed the same whether the instance runs or not.
+
+```bash
+./scripts/aws-status.sh   # is it on or off, and is it costing anything?
+./scripts/aws-stop.sh     # stop the backend (~40s)
+./scripts/aws-start.sh    # start it and wait until the API answers (~40s)
+```
+
+Verified end to end: stopping and restarting needs no SSH and no reconfiguration. The Elastic IP stays associated, so the CloudFront origin keeps resolving, and the container comes back on its own (`restart=unless-stopped` plus Docker enabled at boot). Data is unaffected because it lives in Neon, not on the instance.
+
+While the backend is stopped the frontend URL still loads, but login and data will fail until you start it again — so run `aws-start.sh` a minute before demoing.
+
+You can do the same from the console: **EC2 → Instances → select → Instance state → Stop/Start instance**.
+
 ### Cost/safety notes
 
 The brief explicitly says not to spend money on this — stay inside the free tier:
