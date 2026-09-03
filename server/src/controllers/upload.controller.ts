@@ -24,11 +24,16 @@ export async function presignUpload(req: Request, res: Response): Promise<void> 
   const safeName = filename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
   const key = `products/${randomUUID()}-${safeName}`;
 
-  const uploadUrl = await getSignedUrl(
-    getS3Client(),
-    new PutObjectCommand({ Bucket: getS3BucketName(), Key: key, ContentType: contentType }),
-    { expiresIn: 300 },
-  );
-
-  res.json({ uploadUrl, publicUrl: buildPublicUrl(key) });
+  try {
+    const uploadUrl = await getSignedUrl(
+      getS3Client(),
+      new PutObjectCommand({ Bucket: getS3BucketName(), Key: key, ContentType: contentType }),
+      { expiresIn: 300 },
+    );
+    res.json({ uploadUrl, publicUrl: buildPublicUrl(key) });
+  } catch (err) {
+    // Most likely the SDK could not resolve credentials (no instance role, no env keys).
+    console.error('Presign failed:', err);
+    res.status(500).json({ error: 'Could not generate an upload URL — check the server AWS credentials' });
+  }
 }
