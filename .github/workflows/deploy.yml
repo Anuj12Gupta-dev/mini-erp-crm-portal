@@ -7,10 +7,14 @@ name: Deploy
 #   CLOUDFRONT_DISTRIBUTION_ID              - frontend CloudFront distribution
 #   VITE_API_URL                            - the backend's public HTTPS URL, baked into the frontend build
 # See README.md > Deploying to AWS for how to obtain each of these.
+#
+# This is manual-trigger only (Actions tab -> Deploy -> Run workflow) so it doesn't fail on
+# every push while the secrets above are unset. Once you've added them, uncomment the `push`
+# trigger below to get automatic deploys on every merge to main.
 
 on:
-  push:
-    branches: [main]
+  # push:
+  #   branches: [main]
   workflow_dispatch:
 
 jobs:

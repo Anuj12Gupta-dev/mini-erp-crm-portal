@@ -2,6 +2,17 @@
 
 An internal operations portal for a wholesale/distribution company: customer CRM, product & inventory management, and sales challans (delivery notes) with stock-safe confirmation. Built for four roles — Admin, Sales, Warehouse, Accounts.
 
+## Live deployment
+
+| | |
+|---|---|
+| **Frontend** | https://d3i9zqel4cra9v.cloudfront.net |
+| **Backend API** | https://d3iqgyhmlqxdcf.cloudfront.net (health: `/health`) |
+
+Log in with any of the [seeded users](#seeded-users) — e.g. `admin@example.com` / `Password123!`.
+
+Deployed on AWS: the backend runs as a Docker container on EC2 (`t3.micro`) behind CloudFront for HTTPS; the frontend is a static build in a private S3 bucket served through a second CloudFront distribution via Origin Access Control; the database is PostgreSQL on Neon. Everything sits inside the AWS free tier. See [Deploying to AWS](#deploying-to-aws) for how it was set up.
+
 ## Tech stack
 
 - **Backend:** Node.js + TypeScript, Express 5, PostgreSQL, Prisma ORM
@@ -142,7 +153,7 @@ The spec didn't prescribe exact permission boundaries per role, so the following
 ## Bonus features implemented
 
 - **Docker** — `server/Dockerfile` (multi-stage: install → `prisma generate` → `tsc` build → run) and `client/Dockerfile` (multi-stage: Vite build → served by nginx with an SPA fallback). `docker-compose.yml` at the repo root runs both together for local/demo use.
-- **GitHub Actions** — `.github/workflows/ci.yml` lints, type-checks, and builds both apps on every push/PR. `.github/workflows/deploy.yml` redeploys the backend to EC2 over SSH and syncs the frontend build to S3 + invalidates CloudFront, on push to `main` (see comments at the top of that file for the exact repo secrets it needs).
+- **GitHub Actions** — `.github/workflows/ci.yml` lints, type-checks, and builds both apps on every push/PR. `.github/workflows/deploy.yml` redeploys the backend to EC2 over SSH and syncs the frontend build to S3 + invalidates CloudFront (manual trigger by default — see [Continuous deployment](#6--continuous-deployment-optional) for the secrets it needs to run automatically).
 - **Challan PDF export** — `GET /challans/:id/pdf` streams a PDF (via `pdfkit`, no headless browser needed) with the customer, line items, and totals. There's no separate "Invoice" entity in the required data model, so this generates a PDF of the Challan — the closest existing document. A "Download PDF" button is on the challan detail page.
 - **Product image upload to S3** — `POST /uploads/presign` returns a short-lived presigned S3 PUT URL; the browser uploads the file directly to S3 (never through the Node server), then the returned public URL is saved as the product's `imageUrl`. Requires the `AWS_*`/`S3_BUCKET_NAME` env vars above; without them the endpoint responds `501` and the rest of the app is unaffected.
 
@@ -208,7 +219,41 @@ aws cloudfront create-invalidation --distribution-id <frontend-distribution-id> 
 
 ### 6. Continuous deployment (optional)
 
-`.github/workflows/deploy.yml` automates steps 2 and 5 on every push to `main`. Add these repository secrets (Settings → Secrets and variables → Actions) first: `EC2_HOST`, `EC2_USER` (`ubuntu`), `EC2_SSH_KEY` (the `.pem` contents), `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `S3_BUCKET_NAME`, `CLOUDFRONT_DISTRIBUTION_ID`, `VITE_API_URL`.
+`.github/workflows/deploy.yml` automates steps 2 and 5. It ships as **manual-trigger only** (Actions → Deploy → Run workflow) so it doesn't fail on every push while its secrets are unset.
+
+To enable it, add these repository secrets (Settings → Secrets and variables → Actions), then uncomment the `push` trigger at the top of the workflow:
+
+| Secret | Value for this deployment |
+|---|---|
+| `EC2_HOST` | `52.66.162.177` |
+| `EC2_USER` | `ubuntu` |
+| `EC2_SSH_KEY` | full contents of `~/.ssh/mini-erp-key.pem` |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | the `deploy-admin` IAM keys |
+| `AWS_REGION` | `ap-south-1` |
+| `S3_BUCKET_NAME` | `mini-erp-crm-frontend-881424867129` |
+| `CLOUDFRONT_DISTRIBUTION_ID` | `E3K3MIGG90S5MZ` (frontend distribution) |
+| `VITE_API_URL` | `https://d3iqgyhmlqxdcf.cloudfront.net` |
+
+Note that this grants GitHub Actions the `deploy-admin` credentials, which currently carry `AdministratorAccess` — worth narrowing that IAM policy to just S3 + CloudFront before enabling automatic deploys.
+
+### Redeploying by hand
+
+Backend (after pushing code changes):
+
+```bash
+ssh -i ~/.ssh/mini-erp-key.pem ubuntu@52.66.162.177
+cd ~/mini-erp-crm-portal && git pull origin main && docker compose up -d --build server
+```
+
+Frontend:
+
+```bash
+cd client
+VITE_API_URL=https://d3iqgyhmlqxdcf.cloudfront.net npm run build
+aws s3 sync dist/ s3://mini-erp-crm-frontend-881424867129 --delete --exclude index.html --cache-control "public,max-age=31536000,immutable"
+aws s3 cp dist/index.html s3://mini-erp-crm-frontend-881424867129/index.html --cache-control "no-cache,no-store,must-revalidate" --content-type text/html
+aws cloudfront create-invalidation --distribution-id E3K3MIGG90S5MZ --paths "/*"
+```
 
 ### Cost/safety notes
 
@@ -255,9 +300,9 @@ Either path: after deploying, set the frontend's `VITE_API_URL` to the deployed 
 
 Per the case study's submission requirements:
 
-1. GitHub repository link
-2. Live frontend URL — from the AWS or fallback deployment above
-3. Live backend API URL — from the AWS or fallback deployment above
+1. GitHub repository link — https://github.com/Anuj12Gupta-dev/mini-erp-crm-portal
+2. **Live frontend URL — https://d3i9zqel4cra9v.cloudfront.net**
+3. **Live backend API URL — https://d3iqgyhmlqxdcf.cloudfront.net** (health check: `/health`)
 4. Test login credentials for all roles — see [Seeded users](#seeded-users)
 5. Postman collection — `postman_collection.json` (verified against a live server, see above)
 6. README with setup and deployment instructions — this file
